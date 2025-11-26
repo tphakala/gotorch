@@ -159,7 +159,7 @@ func (os *OptimizerState) Get(index int) []Tensor {
 	if err != nil {
 		panic(C.GoString(err))
 	}
-	var tensors []Tensor
+	tensors := make([]Tensor, 0, int(size))
 	for i := range int(size) {
 		var err *C.char
 		tensor := C.optimizer_state_get(&err, os.data, C.size_t(index), C.size_t(i))

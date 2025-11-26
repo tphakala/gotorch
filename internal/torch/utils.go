@@ -34,13 +34,13 @@ func TEmbedding(input, weight Tensor, paddingIdx int64) Tensor {
 	return Tensor(ret)
 }
 
-func ClipGradNorm(params []Tensor, max, t float64) {
+func ClipGradNorm(params []Tensor, maxNorm, normType float64) {
 	cParams := make([]C.tensor, len(params))
 	for i, p := range params {
 		cParams[i] = C.tensor(p)
 	}
 	var err *C.char
-	C.clip_grad_norm(&err, (*C.tensor)(unsafe.Pointer(&cParams[0])), C.size_t(len(cParams)), C.double(max), C.double(t))
+	C.clip_grad_norm(&err, (*C.tensor)(unsafe.Pointer(&cParams[0])), C.size_t(len(cParams)), C.double(maxNorm), C.double(normType))
 }
 
 func Print(t Tensor) {

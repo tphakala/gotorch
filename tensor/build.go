@@ -5,7 +5,7 @@ import (
 	"io"
 	"path/filepath"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -66,9 +66,7 @@ func WriteLeaks(w io.Writer) {
 			}
 		}
 	}
-	sort.Slice(ids, func(i, j int) bool {
-		return ids[i] < ids[j]
-	})
+	slices.Sort(ids)
 	for _, id := range ids {
 		_, _ = fmt.Fprintf(w, "tensor [>> tensor.%d <<] leaked:\n", id)
 		writeStack(raw[id])

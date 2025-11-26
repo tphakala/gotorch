@@ -29,20 +29,20 @@ func init() {
 
 func main() {
 	optm := optimizer.NewAdam(append(l1.Parameters(), l2.Parameters()...))
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		x, y := getBatch(true)
 		// forward
 		pred := forward(x)
-		loss := loss.NewMse(pred, y)
-		loss = loss.Div(accumulationValue)
+		l := loss.NewMse(pred, y)
+		l = l.Div(accumulationValue)
 		// backward
-		loss.Backward()
+		l.Backward()
 		// update
 		if i > 0 && i%accumulationSteps == 0 {
 			optm.Step()
 		}
 		if i%100 == 0 {
-			fmt.Printf("epoch: %d loss: %f\n", i, loss.Float32Value()[0])
+			fmt.Printf("epoch: %d loss: %f\n", i, l.Float32Value()[0])
 		}
 	}
 	x, _ := getBatch(false)

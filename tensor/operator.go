@@ -172,8 +172,8 @@ func (t *Tensor) Gather(dim int64, index *Tensor) *Tensor {
 	return New(ptr)
 }
 
-func (t *Tensor) Clamp(min, max float64) *Tensor {
-	ptr := torch.Clamp(t.t, min, max)
+func (t *Tensor) Clamp(minVal, maxVal float64) *Tensor {
+	ptr := torch.Clamp(t.t, minVal, maxVal)
 	return New(ptr)
 }
 

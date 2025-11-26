@@ -18,12 +18,12 @@ func Embedding(input *Tensor, weight *Tensor, paddingIdx int64) *Tensor {
 	return New(ptr)
 }
 
-func ClipGradNorm(params []*Tensor, max, t float64) {
+func ClipGradNorm(params []*Tensor, maxNorm, normType float64) {
 	list := make([]torch.Tensor, len(params))
 	for i, p := range params {
 		list[i] = p.t
 	}
-	torch.ClipGradNorm(list, max, t)
+	torch.ClipGradNorm(list, maxNorm, normType)
 }
 
 func (t *Tensor) Print() {

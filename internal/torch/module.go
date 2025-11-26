@@ -46,7 +46,7 @@ type module struct {
 func (m *module) Parameters(count int) []Tensor {
 	params := make([]C.tensor, count)
 	var err *C.char
-	C.module_parameters(&err, m.m, (*C.tensor)(&params[0]))
+	C.module_parameters(&err, m.m, &params[0])
 	if err != nil {
 		panic(C.GoString(err))
 	}

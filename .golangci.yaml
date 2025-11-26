@@ -1,0 +1,121 @@
+version: "2"
+output:
+  sort-order:
+    - linter
+    - severity
+    - file
+linters:
+  enable:
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - copyloopvar
+    - decorder
+    # dupl disabled: storage types are intentionally similar implementations
+    - durationcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - forcetypeassert
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godoclint
+    - govet
+    - iface
+    - ineffassign
+    - makezero
+    - misspell
+    # mnd disabled: half-precision encoding uses IEEE 754 constants
+    # - mnd
+    - modernize
+    - musttag
+    - nakedret
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - recvcheck
+    - revive
+    - sloglint
+    - staticcheck
+    - testifylint
+    - thelper
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - usetesting
+    - wastedassign
+  disable:
+    - unused
+  settings:
+    gocognit:
+      min-complexity: 50
+    gocritic:
+      disabled-checks:
+        - commentFormatting
+        - commentedOutCode
+        - dupSubExpr      # False positives with CGO code
+        - dupImport       # Expected pattern with CGO (import "C" separate from other imports)
+        - unnamedResult   # Not always beneficial for simple functions
+        - paramTypeCombine  # Style preference, not always clearer
+        - ifElseChain     # if-else chains can be clearer than switch for some conditions
+      enabled-tags:
+        - style
+        - diagnostic
+        - performance
+    revive:
+      rules:
+        - name: unused-parameter
+          disabled: true
+    gosec:
+      # Configure gosec for security scanning
+      excludes:
+        - G104  # Audit errors not checked (covered by errcheck)
+      severity: medium
+      confidence: medium
+    prealloc:
+      # Configure prealloc for slice optimization
+      simple: true
+      range-loops: true
+      for-loops: true
+    exhaustive:
+      # Check exhaustiveness of enum switch statements
+      default-signifies-exhaustive: true
+    dupl:
+      # Intentional similar patterns in storage types
+      threshold: 150
+    mnd:
+      # Allow magic numbers in certain contexts
+      ignored-numbers:
+        - "0"
+        - "1"
+        - "2"
+        - "3"
+        - "4"
+        - "8"
+        - "10"
+        - "16"
+        - "32"
+        - "64"
+        - "100"
+        - "128"
+        - "256"
+        - "1000"
+      ignored-functions:
+        - "make"
+        - "runtime.Callers"
+        - "tensor.WithShapes"
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: true
+  new: false

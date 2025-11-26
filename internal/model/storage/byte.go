@@ -17,23 +17,21 @@ var _ Storage = &Byte{}
 func (*Byte) New(wg *sync.WaitGroup, size int, file *zip.File) (Storage, error) {
 	fs, err := file.Open()
 	if err != nil {
-		return nil, fmt.Errorf("Byte.New: can not open file %s: %v", file.Name, err)
+		return nil, fmt.Errorf("Byte.New: can not open file %s: %w", file.Name, err)
 	}
 	defer func() { _ = fs.Close() }()
 	var ret Byte
 	ret.data = make([]byte, size)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_, err = io.ReadFull(fs, ret.data)
 		if err != nil {
-			panic(fmt.Errorf("Byte.New: can not read file %s: %v", file.Name, err))
+			panic(fmt.Errorf("Byte.New: can not read file %s: %w", file.Name, err))
 		}
-	}()
+	})
 	return &ret, nil
 }
 
-func (b *Byte) Get() interface{} {
+func (b *Byte) Get() any {
 	return b.data
 }
 

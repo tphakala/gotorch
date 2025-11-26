@@ -20,7 +20,11 @@ func (m *module) Parameters() []*tensor.Tensor {
 }
 
 func (m *module) Forward(x *tensor.Tensor) *tensor.Tensor {
-	t := m.m.(torch.NormalForward).Forward(x.Tensor())
+	nf, ok := m.m.(torch.NormalForward)
+	if !ok {
+		panic("module does not implement NormalForward interface")
+	}
+	t := nf.Forward(x.Tensor())
 	return tensor.New(t)
 }
 

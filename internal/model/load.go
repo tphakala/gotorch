@@ -16,7 +16,7 @@ import (
 	"github.com/nlpodyssey/gopickle/types"
 )
 
-type findClassFunc func(module, name string) (interface{}, error)
+type findClassFunc func(module, name string) (any, error)
 
 type Model struct {
 	wg       sync.WaitGroup
@@ -81,7 +81,7 @@ func files(r *zip.Reader) map[string]*zip.File {
 }
 
 func (m *Model) buildFindClass(cb findClassFunc) findClassFunc {
-	return func(module, name string) (interface{}, error) {
+	return func(module, name string) (any, error) {
 		switch module + "." + name {
 		case "torch._utils._rebuild_tensor_v2":
 			return &torch.RebuildTensorV2{}, nil
@@ -114,7 +114,7 @@ func (m *Model) buildFindClass(cb findClassFunc) findClassFunc {
 	}
 }
 
-func (m *Model) persistentLoad(id interface{}) (interface{}, error) {
+func (m *Model) persistentLoad(id any) (any, error) {
 	tuple, tupleOk := id.(*types.Tuple)
 	if !tupleOk || tuple.Len() == 0 {
 		return nil, fmt.Errorf("PersistentLoad: non-empty tuple expected, got %#v", id)
@@ -136,23 +136,23 @@ func (m *Model) persistentLoad(id interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("PersistentLoad: unexpected data types")
 	}
 
-	storage, ok := m.storages[key]
+	stor, ok := m.storages[key]
 	if !ok {
 		file, ok := m.files[key]
 		if !ok {
 			return nil, fmt.Errorf("PersistentLoad: file not found: %s", key)
 		}
 		var err error
-		storage, err = storageType.New(&m.wg, size, file)
+		stor, err = storageType.New(&m.wg, size, file)
 		if err != nil {
 			return nil, err
 		}
-		m.storages[key] = storage
+		m.storages[key] = stor
 	}
-	return storage, nil
+	return stor, nil
 }
 
-func (m *Model) loadParams(params interface{}) error {
+func (m *Model) loadParams(params any) error {
 	switch params.(type) {
 	case *types.OrderedDict:
 		return m.loadParamsOrderedDict(params)
@@ -163,8 +163,11 @@ func (m *Model) loadParams(params interface{}) error {
 	}
 }
 
-func (m *Model) loadParamsOrderedDict(params interface{}) error {
-	dict := params.(*types.OrderedDict)
+func (m *Model) loadParamsOrderedDict(params any) error {
+	dict, ok := params.(*types.OrderedDict)
+	if !ok {
+		return fmt.Errorf("loadParamsOrderedDict: expected *types.OrderedDict, got %T", params)
+	}
 	m.params = make(map[string]storage.Storage)
 	for _, entry := range dict.Map {
 		key, keyOk := entry.Key.(string)
@@ -177,8 +180,11 @@ func (m *Model) loadParamsOrderedDict(params interface{}) error {
 	return nil
 }
 
-func (m *Model) loadParamsDict(params interface{}) error {
-	dict := params.(*types.Dict)
+func (m *Model) loadParamsDict(params any) error {
+	dict, ok := params.(*types.Dict)
+	if !ok {
+		return fmt.Errorf("loadParamsDict: expected *types.Dict, got %T", params)
+	}
 	m.params = make(map[string]storage.Storage)
 	for _, entry := range *dict {
 		key, keyOk := entry.Key.(string)
