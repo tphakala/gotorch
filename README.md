@@ -75,6 +75,59 @@ for name, t := m.Params() {
 }
 ```
 
+## TorchScript/JIT Module Support
+
+The `jit` package provides support for loading and running TorchScript models, including multi-output models like BirdNET v3.0.
+
+### Basic Usage
+
+```go
+import "github.com/lwch/gotorch/jit"
+
+// Load a TorchScript model (to CPU by default)
+module, err := jit.Load("model.pt")
+if err != nil {
+    log.Fatal(err)
+}
+defer module.Close()
+
+// Set to evaluation mode
+module.Eval()
+
+// Run inference with single output
+output, err := module.Forward(inputTensor)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Run inference with multiple outputs (e.g., BirdNET returns embeddings + predictions)
+outputs, err := module.ForwardMulti(inputTensor, 2) // 2 outputs
+if err != nil {
+    log.Fatal(err)
+}
+for i, out := range jit.Outputs(outputs) {
+    fmt.Printf("Output %d: %v\n", i, out.Shapes())
+}
+```
+
+### Device Targeting
+
+```go
+// Load model directly to CUDA
+module, _ := jit.LoadToDevice("model.pt", consts.KCUDA)
+
+// Or move an existing module to a device
+module.ToDevice(consts.KCUDA)
+```
+
+### Features
+
+- **Single and multi-output forward passes** (`Forward`, `ForwardMulti`)
+- **Device targeting** (CPU/CUDA) via `LoadToDevice` or `ToDevice`
+- **Eval/train mode switching**
+- **Thread-safe cleanup** using Go 1.25+ `runtime.AddCleanup`
+- **Iterator support** for outputs via `jit.Outputs()`
+
 ## Version Compatibility
 
 | gotorch version | libtorch version |
