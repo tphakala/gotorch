@@ -1,6 +1,7 @@
 #ifndef __GOTORCH_JIT_H__
 #define __GOTORCH_JIT_H__
 
+#include <stddef.h>
 #include <stdint.h>
 #include "api.h"
 

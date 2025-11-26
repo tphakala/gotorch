@@ -28,6 +28,15 @@ extern "C"
         return auto_catch_tensor(
             [m, input]()
             {
+                if (m == nullptr)
+                {
+                    throw std::runtime_error("jit_forward: null module");
+                }
+                if (input == nullptr)
+                {
+                    throw std::runtime_error("jit_forward: null input tensor");
+                }
+
                 std::vector<torch::jit::IValue> inputs;
                 inputs.push_back(*input);
 
@@ -53,6 +62,19 @@ extern "C"
         return auto_catch_size_t(
             [m, input, out_tensors, out_count]() -> size_t
             {
+                if (m == nullptr)
+                {
+                    throw std::runtime_error("jit_forward_multi: null module");
+                }
+                if (input == nullptr)
+                {
+                    throw std::runtime_error("jit_forward_multi: null input tensor");
+                }
+                if (out_count > 0 && out_tensors == nullptr)
+                {
+                    throw std::runtime_error("jit_forward_multi: null out_tensors for nonzero out_count");
+                }
+
                 std::vector<torch::jit::IValue> inputs;
                 inputs.push_back(*input);
 
@@ -89,6 +111,10 @@ extern "C"
         auto_catch_void(
             [m, device]()
             {
+                if (m == nullptr)
+                {
+                    throw std::runtime_error("jit_to_device: null module");
+                }
                 torch::Device dev = (device == 0) ? torch::kCPU : torch::kCUDA;
                 m->to(dev);
             },
