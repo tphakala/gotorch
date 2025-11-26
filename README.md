@@ -4,54 +4,54 @@
 [![gotorch](https://github.com/lwch/gotorch/actions/workflows/gpu.yml/badge.svg)](https://github.com/lwch/gotorch/actions/workflows/gpu.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/lwch/gotorch.svg)](https://pkg.go.dev/github.com/lwch/gotorch)
 
-这是一个GO版本的libtorch封装库，通过该库可快速搭建torch的模型，目前已支持最新版本的libtorch(2.0.1)，支持的操作系统如下
+This is a Go wrapper library for libtorch. With this library, you can quickly build torch models. It currently supports the latest version of libtorch (2.0.1) and the following operating systems:
 
-- windows
-- linux
-- macos
+- Windows
+- Linux
+- macOS
 
-已支持*CPU*和*GPU*运算
+Both *CPU* and *GPU* computation are supported.
 
-## 安装
+## Installation
 
-1. 下载[libtorch](https://pytorch.org/get-started/locally/)，windows下解压到D盘，linux和mac下解压到/usr/local/lib目录下
-2. 下载[libgotorch](https://github.com/lwch/gotorch/releases/latest)并放置在libtorch的lib目录下
-  - windows操作系统请更名为gotorch.dll
-  - linux操作系统请根据glibc版本下载对应so文件并更名为libgotorch.so
-  - macos最新版本仅支持arm64架构，下载后请更名为libgotorch.dylib
+1. Download [libtorch](https://pytorch.org/get-started/locally/). On Windows, extract it to the D: drive. On Linux and macOS, extract it to the /usr/local/lib directory.
+2. Download [libgotorch](https://github.com/lwch/gotorch/releases/latest) and place it in the libtorch lib directory:
+   - On Windows, rename it to gotorch.dll
+   - On Linux, download the appropriate .so file based on your glibc version and rename it to libgotorch.so
+   - On macOS, the latest version only supports arm64 architecture. After downloading, rename it to libgotorch.dylib
 
-注：由于官方提供的windows版本libtorch使用msvc进行编译，通过mingw无法正常链接，因此增加libgotorch库来进行转换，有关libgotorch库的编译请看[libgotorch编译](docs/libgotorch.md)，另外也可参考[release.yml](.github/workflows/release.yml)中的命令。
+Note: Since the official Windows version of libtorch is compiled with MSVC and cannot be linked properly with MinGW, the libgotorch library was added for conversion. For information on compiling libgotorch, see [libgotorch compilation](docs/libgotorch.md). You can also refer to the commands in [release.yml](.github/workflows/release.yml).
 
-### linux
+### Linux
 
-在.bashrc中添加以下内容
+Add the following to your .bashrc:
 
 ```
 export LIBRARY_PATH="$LIBRARY_PATH:/usr/local/lib/libtorch/lib"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/libtorch/lib"
 ```
 
-### macos
+### macOS
 
-在.bashrc中添加以下内容
+Add the following to your .bashrc:
 
 ```
 export LIBRARY_PATH="$LIBRARY_PATH:/usr/local/lib/libtorch/lib"
 export DYLD_FALLBACK_LIBRARY_PATH="$DYLD_FALLBACK_LIBRARY_PATH:/usr/local/lib/libtorch/lib"
 ```
 
-### windows
+### Windows
 
-windows系统下使用cgo需要依赖mingw，推荐使用[llvm-mingw](https://github.com/mstorsjo/llvm-mingw)，并添加以下环境变量
+Using cgo on Windows requires MinGW. [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) is recommended. Add the following environment variables:
 
 ```
 LIBRARY_PATH="D:\libtorch\lib"
-Path="D:\libtorch\lib;<mingw所在路径>\bin"
+Path="D:\libtorch\lib;<path to mingw>\bin"
 ```
 
-## 使用
+## Usage
 
-可查看[mlp](example/mlp)中的示例
+See the example in [mlp](example/mlp):
 
 ```go
 a := tensor.ARange(nil, 6, consts.KFloat,
@@ -61,12 +61,12 @@ b := tensor.ARange(nil, 6, consts.KFloat,
     tensor.WithShape(3, 2),
     tensor.WithDevice(consts.KCUDA))
 c := a.MatMul(b)
-fmt.Println(c.ToDevice(consts.KCPU).Float32Value()) // 注意：显存中的数据无法直接读取，需将其转换到CPU后才可读取
+fmt.Println(c.ToDevice(consts.KCPU).Float32Value()) // Note: Data in GPU memory cannot be read directly; it must be transferred to CPU first
 ```
 
-**注意: 由于大部分tensor对象在C栈中创建，在go中无法正确捕获内存用量，因此建议在长期运行的服务中（如模型训练）使用debug.SetGCPercent将go的GC关闭并在每个迭代中手动调用runtime.GC进行内存释放**
+**Note: Since most tensor objects are created on the C stack and Go cannot accurately track memory usage, it is recommended to disable Go's GC using debug.SetGCPercent in long-running services (such as model training) and manually call runtime.GC in each iteration to release memory.**
 
-## 模型的checkpoint加载
+## Loading Model Checkpoints
 
 ```go
 m, _ := model.Load("yolo_tiny.pt", nil)
@@ -75,9 +75,9 @@ for name, t := m.Params() {
 }
 ```
 
-## 版本维护
+## Version Compatibility
 
-| gotorch版本 | libtorch版本 |
+| gotorch version | libtorch version |
 | --- | --- |
 | v1.0.0~v1.5.7 | v2.0.1 |
 | v1.6.0~v1.7.2 | v2.1~v2.2.1 |
