@@ -17,23 +17,21 @@ var _ Storage = &BFloat16{}
 func (*BFloat16) New(wg *sync.WaitGroup, size int, file *zip.File) (Storage, error) {
 	fs, err := file.Open()
 	if err != nil {
-		return nil, fmt.Errorf("BFloat16.New: can not open file %s: %v", file.Name, err)
+		return nil, fmt.Errorf("BFloat16.New: can not open file %s: %w", file.Name, err)
 	}
-	defer fs.Close()
+	defer func() { _ = fs.Close() }()
 	var ret BFloat16
 	ret.data = make([]uint16, size)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		err = binary.Read(fs, binary.LittleEndian, ret.data)
 		if err != nil {
-			panic(fmt.Errorf("BFloat16.New: can not read file %s: %v", file.Name, err))
+			panic(fmt.Errorf("BFloat16.New: can not read file %s: %w", file.Name, err))
 		}
-	}()
+	})
 	return &ret, nil
 }
 
-func (f *BFloat16) Get() interface{} {
+func (f *BFloat16) Get() any {
 	return f.data
 }
 

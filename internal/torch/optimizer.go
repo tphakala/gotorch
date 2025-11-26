@@ -1,7 +1,6 @@
 package torch
 
 import (
-	"errors"
 	"runtime"
 	"sync"
 	"time"
@@ -11,9 +10,26 @@ import (
 // #include "optimizer.h"
 import "C"
 
-type Optimizer struct {
-	m    sync.Mutex
+// optimizerHandle wraps the optimizer with once-only cleanup semantics.
+type optimizerHandle struct {
 	data C.optimizer
+	once sync.Once
+}
+
+func (h *optimizerHandle) free() {
+	h.once.Do(func() {
+		if h.data != nil {
+			var err *C.char
+			C.free_optimizer(&err, h.data)
+			h.data = nil
+		}
+	})
+}
+
+type Optimizer struct {
+	m      sync.Mutex
+	handle *optimizerHandle
+	data   C.optimizer
 }
 
 func NewAdamOptimizer(params []Tensor, lr, beta1, beta2, eps, weightDecay float64) *Optimizer {
@@ -26,8 +42,11 @@ func NewAdamOptimizer(params []Tensor, lr, beta1, beta2, eps, weightDecay float6
 	if err != nil {
 		panic(C.GoString(err))
 	}
-	optm := &Optimizer{data: ptr}
-	runtime.SetFinalizer(optm, freeOptimizer)
+	handle := &optimizerHandle{data: ptr}
+	optm := &Optimizer{handle: handle, data: ptr}
+	runtime.AddCleanup(optm, func(h *optimizerHandle) {
+		h.free()
+	}, handle)
 	return optm
 }
 
@@ -41,23 +60,12 @@ func NewAdamWOptimizer(params []Tensor, lr, beta1, beta2, eps, weightDecay float
 	if err != nil {
 		panic(C.GoString(err))
 	}
-	optm := &Optimizer{data: ptr}
-	runtime.SetFinalizer(optm, freeOptimizer)
+	handle := &optimizerHandle{data: ptr}
+	optm := &Optimizer{handle: handle, data: ptr}
+	runtime.AddCleanup(optm, func(h *optimizerHandle) {
+		h.free()
+	}, handle)
 	return optm
-}
-
-func freeOptimizer(optm *Optimizer) error {
-	if optm == nil || optm.data == nil {
-		return nil
-	}
-	var err *C.char
-	C.free_optimizer(&err, optm.data)
-	if err != nil {
-		return errors.New(C.GoString(err))
-	}
-	optm.data = nil
-	runtime.SetFinalizer(optm, nil)
-	return nil
 }
 
 func (optm *Optimizer) Step() {
@@ -97,8 +105,24 @@ func (optm *Optimizer) SetLr(lr float64) {
 	}
 }
 
+// optimizerStateHandle wraps the optimizer state with once-only cleanup semantics.
+type optimizerStateHandle struct {
+	data C.optimizer_state
+	once sync.Once
+}
+
+func (h *optimizerStateHandle) free() {
+	h.once.Do(func() {
+		if h.data != nil {
+			C.optimizer_state_free(h.data)
+			h.data = nil
+		}
+	})
+}
+
 type OptimizerState struct {
 	created time.Time
+	handle  *optimizerStateHandle
 	data    C.optimizer_state
 }
 
@@ -108,22 +132,16 @@ func (optm *Optimizer) GetState() *OptimizerState {
 	if err != nil {
 		panic(C.GoString(err))
 	}
+	handle := &optimizerStateHandle{data: data}
 	os := &OptimizerState{
 		created: time.Now(),
+		handle:  handle,
 		data:    data,
 	}
-	runtime.SetFinalizer(os, freeOptimizerState)
+	runtime.AddCleanup(os, func(h *optimizerStateHandle) {
+		h.free()
+	}, handle)
 	return os
-}
-
-func freeOptimizerState(os *OptimizerState) error {
-	if os == nil || os.data == nil {
-		return nil
-	}
-	C.optimizer_state_free(os.data)
-	os.data = nil
-	runtime.SetFinalizer(os, nil)
-	return nil
 }
 
 func (os *OptimizerState) Size() int {
@@ -141,8 +159,8 @@ func (os *OptimizerState) Get(index int) []Tensor {
 	if err != nil {
 		panic(C.GoString(err))
 	}
-	var tensors []Tensor
-	for i := 0; i < int(size); i++ {
+	tensors := make([]Tensor, 0, int(size))
+	for i := range int(size) {
 		var err *C.char
 		tensor := C.optimizer_state_get(&err, os.data, C.size_t(index), C.size_t(i))
 		if err != nil {
@@ -162,7 +180,7 @@ func (os *OptimizerState) Set(index int, values []Tensor) {
 	if size != 0 && len(values) != int(size) {
 		panic("invalid size")
 	}
-	for i := 0; i < int(size); i++ {
+	for i := range int(size) {
 		var err *C.char
 		C.optimizer_state_set(&err, os.data, C.size_t(index), C.size_t(i), C.tensor(values[i]))
 		if err != nil {

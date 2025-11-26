@@ -17,23 +17,21 @@ var _ Storage = &Char{}
 func (*Char) New(wg *sync.WaitGroup, size int, file *zip.File) (Storage, error) {
 	fs, err := file.Open()
 	if err != nil {
-		return nil, fmt.Errorf("Char.New: can not open file %s: %v", file.Name, err)
+		return nil, fmt.Errorf("Char.New: can not open file %s: %w", file.Name, err)
 	}
-	defer fs.Close()
+	defer func() { _ = fs.Close() }()
 	var ret Char
 	ret.data = make([]int8, size)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		err = binary.Read(fs, binary.LittleEndian, ret.data)
 		if err != nil {
-			panic(fmt.Errorf("Char.New: can not read file %s: %v", file.Name, err))
+			panic(fmt.Errorf("Char.New: can not read file %s: %w", file.Name, err))
 		}
-	}()
+	})
 	return &ret, nil
 }
 
-func (c *Char) Get() interface{} {
+func (c *Char) Get() any {
 	return c.data
 }
 

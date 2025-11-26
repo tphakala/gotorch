@@ -300,9 +300,9 @@ func Gather(t Tensor, dim int64, index Tensor) Tensor {
 	return Tensor(ptr)
 }
 
-func Clamp(t Tensor, min, max float64) Tensor {
+func Clamp(t Tensor, minVal, maxVal float64) Tensor {
 	var err *C.char
-	ptr := C.tensor_clamp(&err, C.tensor(t), C.double(min), C.double(max))
+	ptr := C.tensor_clamp(&err, C.tensor(t), C.double(minVal), C.double(maxVal))
 	if err != nil {
 		panic(C.GoString(err))
 	}

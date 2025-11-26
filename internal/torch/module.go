@@ -6,6 +6,7 @@ import "C"
 import (
 	"math"
 	"runtime"
+	"sync"
 
 	"github.com/lwch/gotorch/consts"
 	"github.com/lwch/logging"
@@ -21,30 +22,36 @@ type Module interface {
 	ToScalarType(consts.ScalarType)
 }
 
-type module struct {
-	m C.module
+// moduleHandle wraps the module with once-only cleanup semantics.
+type moduleHandle struct {
+	m    C.module
+	once sync.Once
 }
 
-func freeModule(m *module) error {
-	if m.m == nil {
-		return nil
-	}
-	logging.Debug("free module: %p", m)
-	C.free_module(m.m)
-	m.m = nil
-	runtime.SetFinalizer(m, nil)
-	return nil
+func (h *moduleHandle) free() {
+	h.once.Do(func() {
+		if h.m != nil {
+			logging.Debug("free module handle: %p", h)
+			C.free_module(h.m)
+			h.m = nil
+		}
+	})
+}
+
+type module struct {
+	handle *moduleHandle
+	m      C.module
 }
 
 func (m *module) Parameters(count int) []Tensor {
 	params := make([]C.tensor, count)
 	var err *C.char
-	C.module_parameters(&err, m.m, (*C.tensor)(&params[0]))
+	C.module_parameters(&err, m.m, &params[0])
 	if err != nil {
 		panic(C.GoString(err))
 	}
 	ret := make([]Tensor, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		ret[i] = Tensor(params[i])
 	}
 	return ret
@@ -79,9 +86,12 @@ func NewLinear(inFeatures, outFeatures int64) *Linear {
 	if err != nil {
 		panic(C.GoString(err))
 	}
-	ret := &Linear{&module{l}}
+	handle := &moduleHandle{m: l}
+	ret := &Linear{&module{handle: handle, m: l}}
 	logging.Debug("new linear layer: %p", ret.module)
-	runtime.SetFinalizer(ret.module, freeModule)
+	runtime.AddCleanup(ret, func(h *moduleHandle) {
+		h.free()
+	}, handle)
 	return ret
 }
 
@@ -112,9 +122,12 @@ func NewLayerNorm(shape []int64) *LayerNorm {
 	if err != nil {
 		panic(C.GoString(err))
 	}
-	ret := &LayerNorm{&module{l}}
+	handle := &moduleHandle{m: l}
+	ret := &LayerNorm{&module{handle: handle, m: l}}
 	logging.Debug("new layer_norm layer: %p", ret.module)
-	runtime.SetFinalizer(ret.module, freeModule)
+	runtime.AddCleanup(ret, func(h *moduleHandle) {
+		h.free()
+	}, handle)
 	return ret
 }
 
@@ -148,9 +161,12 @@ func NewAttention(embedDim, numHeads int64, dropout float64) *Attention {
 	if err != nil {
 		panic(C.GoString(err))
 	}
-	ret := &Attention{&module{l}}
+	handle := &moduleHandle{m: l}
+	ret := &Attention{&module{handle: handle, m: l}}
 	logging.Debug("new attention layer: %p", ret.module)
-	runtime.SetFinalizer(ret.module, freeModule)
+	runtime.AddCleanup(ret, func(h *moduleHandle) {
+		h.free()
+	}, handle)
 	return ret
 }
 
@@ -199,9 +215,12 @@ func NewEmbedding(numEmbeddings, embeddingDim, paddingIdx int64) *Embedding {
 	if err != nil {
 		panic(C.GoString(err))
 	}
-	ret := &Embedding{&module{l}}
+	handle := &moduleHandle{m: l}
+	ret := &Embedding{&module{handle: handle, m: l}}
 	logging.Debug("new embedding layer: %p", ret.module)
-	runtime.SetFinalizer(ret.module, freeModule)
+	runtime.AddCleanup(ret, func(h *moduleHandle) {
+		h.free()
+	}, handle)
 	return ret
 }
 

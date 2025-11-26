@@ -215,9 +215,7 @@ func TestConcurrentInference(t *testing.T) {
 		errors := make(chan error, numGoroutines)
 
 		for range numGoroutines {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 
 				input := tensor.FromFloat32(make([]float32, 160000),
 					tensor.WithShapes(1, 160000),
@@ -227,7 +225,7 @@ func TestConcurrentInference(t *testing.T) {
 				if err != nil {
 					errors <- err
 				}
-			}()
+			})
 		}
 
 		wg.Wait()

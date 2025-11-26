@@ -13,18 +13,18 @@ type RebuildParameter struct{}
 
 var _ types.Callable = &RebuildParameter{}
 
-func (r *RebuildParameter) Call(args ...interface{}) (interface{}, error) {
+func (r *RebuildParameter) Call(args ...any) (any, error) {
 	if len(args) != 3 {
 		return nil, fmt.Errorf("RebuildParameter unexpected 3 args, got %d: %#v", len(args), args)
 	}
 
-	storage, storageOk := args[0].(storage.Storage)
+	stor, storageOk := args[0].(storage.Storage)
 	requiresGrad, requiresGradOk := args[1].(bool)
 	if !storageOk || !requiresGradOk {
 		return nil, fmt.Errorf("RebuildParameter unexpected args: %#v", args)
 	}
 
-	storage.SetRequiresGrad(requiresGrad)
+	stor.SetRequiresGrad(requiresGrad)
 
-	return storage, nil
+	return stor, nil
 }

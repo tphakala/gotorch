@@ -20,6 +20,10 @@ func (a *Attention) Forward(q, k, v, mask *tensor.Tensor, isCausal bool) (*tenso
 	if mask != nil {
 		m = mask.Tensor()
 	}
-	ret, score := a.m.(torch.AttentionForward).Forward(q.Tensor(), k.Tensor(), v.Tensor(), m, isCausal)
+	af, ok := a.m.(torch.AttentionForward)
+	if !ok {
+		panic("attention module does not implement AttentionForward interface")
+	}
+	ret, score := af.Forward(q.Tensor(), k.Tensor(), v.Tensor(), m, isCausal)
 	return tensor.New(ret), tensor.New(score)
 }

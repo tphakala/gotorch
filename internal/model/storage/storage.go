@@ -26,7 +26,7 @@ type Storage interface {
 	SetRequiresGrad(requiresGrad bool)
 	GetRequiresGrad() bool
 	Type() StorageType
-	Get() interface{}
+	Get() any
 }
 
 type base struct {

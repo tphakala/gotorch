@@ -17,23 +17,21 @@ var _ Storage = &Double{}
 func (*Double) New(wg *sync.WaitGroup, size int, file *zip.File) (Storage, error) {
 	fs, err := file.Open()
 	if err != nil {
-		return nil, fmt.Errorf("Double.New: can not open file %s: %v", file.Name, err)
+		return nil, fmt.Errorf("Double.New: can not open file %s: %w", file.Name, err)
 	}
-	defer fs.Close()
+	defer func() { _ = fs.Close() }()
 	var ret Double
 	ret.data = make([]float64, size)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		err = binary.Read(fs, binary.LittleEndian, ret.data)
 		if err != nil {
-			panic(fmt.Errorf("Double.New: can not read file %s: %v", file.Name, err))
+			panic(fmt.Errorf("Double.New: can not read file %s: %w", file.Name, err))
 		}
-	}()
+	})
 	return &ret, nil
 }
 
-func (f *Double) Get() interface{} {
+func (f *Double) Get() any {
 	return f.data
 }
 

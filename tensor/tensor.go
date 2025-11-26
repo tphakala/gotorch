@@ -2,6 +2,7 @@ package tensor
 
 import (
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/lwch/gotorch/consts"
@@ -9,9 +10,28 @@ import (
 	"github.com/lwch/logging"
 )
 
+// tensorHandle wraps the tensor with once-only cleanup semantics.
+type tensorHandle struct {
+	t    torch.Tensor
+	idx  uint64
+	once sync.Once
+}
+
+func (h *tensorHandle) free() {
+	h.once.Do(func() {
+		if h.t != nil {
+			logging.Debug("free tensor: %d", h.idx)
+			freeLeakTracking(h.idx)
+			torch.FreeTensor(h.t)
+			h.t = nil
+		}
+	})
+}
+
 type Tensor struct {
 	idx     uint64
 	created time.Time
+	handle  *tensorHandle
 	t       torch.Tensor
 }
 
@@ -22,20 +42,16 @@ func New(t torch.Tensor) *Tensor {
 	}
 	logBuildInfo(ts)
 	logging.Debug("new tensor: %d", ts.idx)
-	runtime.SetFinalizer(ts, freeTensor)
-	return ts
-}
 
-func freeTensor(t *Tensor) error {
-	if t == nil || t.t == nil {
-		return nil
-	}
-	logging.Debug("free tensor: %d", t.idx)
-	free(t)
-	torch.FreeTensor(t.t)
-	t.t = nil
-	runtime.SetFinalizer(t, nil)
-	return nil
+	// Go 1.24+: Use AddCleanup instead of SetFinalizer
+	// Benefits: no cycle leaks, multiple cleanups allowed, parallel execution
+	handle := &tensorHandle{t: t, idx: ts.idx}
+	ts.handle = handle
+	runtime.AddCleanup(ts, func(h *tensorHandle) {
+		h.free()
+	}, handle)
+
+	return ts
 }
 
 func (t *Tensor) Created() time.Time {
