@@ -129,6 +129,24 @@ optimizer_state auto_catch_optimizer_state(Function f, char **err)
     return 0;
 }
 
+template <typename Function>
+jit_module auto_catch_jit_module(Function f, char **err)
+{
+    try
+    {
+        return f();
+    }
+    catch (const torch::Error &e)
+    {
+        *err = strdup(e.msg().c_str());
+    }
+    catch (const std::exception &e)
+    {
+        *err = strdup(e.what());
+    }
+    return nullptr;
+}
+
 #endif
 
 #endif // __GOTORCH_EXCEPTION_H__
