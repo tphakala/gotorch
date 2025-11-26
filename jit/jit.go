@@ -2,30 +2,37 @@
 package jit
 
 import (
+	"errors"
 	"fmt"
 	"iter"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"github.com/lwch/gotorch/consts"
 	"github.com/lwch/gotorch/internal/torch"
 	"github.com/lwch/gotorch/tensor"
 )
 
+// ErrModuleClosed is returned when operations are attempted on a closed module.
+var ErrModuleClosed = errors.New("module has been closed")
+
 // moduleHandle wraps the JIT module with once-only cleanup semantics.
 type moduleHandle struct {
-	m       torch.JitModule
-	once    sync.Once
-	cleaned bool
+	m      torch.JitModule
+	once   sync.Once
+	closed atomic.Bool
 }
 
 func (h *moduleHandle) free() {
 	h.once.Do(func() {
-		if !h.cleaned {
-			torch.JitFree(h.m)
-			h.cleaned = true
-		}
+		h.closed.Store(true)
+		torch.JitFree(h.m)
 	})
+}
+
+func (h *moduleHandle) isClosed() bool {
+	return h.closed.Load()
 }
 
 // Module represents a loaded TorchScript model.
@@ -73,6 +80,13 @@ func (m *Module) Close() {
 // Forward runs inference and returns a single output tensor.
 // For models returning multiple outputs, this returns only the first.
 func (m *Module) Forward(input *tensor.Tensor) (out *tensor.Tensor, err error) {
+	if m == nil || m.handle == nil {
+		return nil, ErrModuleClosed
+	}
+	if m.handle.isClosed() {
+		return nil, ErrModuleClosed
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			out = nil
@@ -87,6 +101,13 @@ func (m *Module) Forward(input *tensor.Tensor) (out *tensor.Tensor, err error) {
 // ForwardMulti runs inference and returns multiple output tensors.
 // This is useful for models like BirdNET v3.0 that return (embeddings, predictions).
 func (m *Module) ForwardMulti(input *tensor.Tensor, numOutputs int) (out []*tensor.Tensor, err error) {
+	if m == nil || m.handle == nil {
+		return nil, ErrModuleClosed
+	}
+	if m.handle.isClosed() {
+		return nil, ErrModuleClosed
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			out = nil
@@ -104,6 +125,13 @@ func (m *Module) ForwardMulti(input *tensor.Tensor, numOutputs int) (out []*tens
 
 // ToDevice moves the module to the specified device.
 func (m *Module) ToDevice(device consts.DeviceType) (err error) {
+	if m == nil || m.handle == nil {
+		return ErrModuleClosed
+	}
+	if m.handle.isClosed() {
+		return ErrModuleClosed
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("failed to move module to device: %v", r)
@@ -117,11 +145,17 @@ func (m *Module) ToDevice(device consts.DeviceType) (err error) {
 // Eval sets the module to evaluation mode.
 // This disables dropout and batch normalization updates.
 func (m *Module) Eval() {
+	if m == nil || m.handle == nil || m.handle.isClosed() {
+		return
+	}
 	torch.JitEval(m.handle.m)
 }
 
 // Train sets the module to training mode.
 func (m *Module) Train() {
+	if m == nil || m.handle == nil || m.handle.isClosed() {
+		return
+	}
 	torch.JitTrain(m.handle.m)
 }
 
