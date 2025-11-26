@@ -1,6 +1,6 @@
 module github.com/lwch/gotorch
 
-go 1.20
+go 1.25
 
 require (
 	github.com/lwch/logging v1.1.3

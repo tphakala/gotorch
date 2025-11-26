@@ -15,6 +15,7 @@ add_library(gotorch SHARED
 	../internal/torch/optimizer.h optimizer.cpp
 	../internal/torch/module.h module.cpp
 	../internal/torch/tensor.h tensor.cpp
+	../internal/torch/jit.h jit.cpp
 	conv.cpp
 	utils.cpp)
 target_link_libraries(gotorch "${TORCH_LIBRARIES}")

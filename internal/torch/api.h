@@ -3,12 +3,14 @@
 
 #ifdef __cplusplus
 #include <torch/torch.h>
+#include <torch/script.h>
 extern "C"
 {
 
     typedef torch::Tensor *tensor;
     typedef torch::optim::Optimizer *optimizer;
     typedef torch::nn::Module *module;
+    typedef torch::jit::script::Module *jit_module;
 
     struct _optimizer_state
     {
@@ -19,6 +21,7 @@ extern "C"
 typedef void *tensor;
 typedef void *optimizer;
 typedef void *module;
+typedef void *jit_module;
 typedef void *optimizer_state;
 #endif
 
