@@ -19,7 +19,7 @@ func (*Char) New(wg *sync.WaitGroup, size int, file *zip.File) (Storage, error) 
 	if err != nil {
 		return nil, fmt.Errorf("Char.New: can not open file %s: %v", file.Name, err)
 	}
-	defer fs.Close()
+	defer func() { _ = fs.Close() }()
 	var ret Char
 	ret.data = make([]int8, size)
 	wg.Add(1)

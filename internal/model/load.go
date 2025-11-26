@@ -30,7 +30,7 @@ func Load(dir string) (*Model, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	fi, err := f.Stat()
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func Load(dir string) (*Model, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer data.Close()
+	defer func() { _ = data.Close() }()
 	pkl := pickle.NewUnpickler(data)
 	var m Model
 	m.storages = make(map[string]storage.Storage)

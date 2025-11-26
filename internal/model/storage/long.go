@@ -19,7 +19,7 @@ func (*Long) New(wg *sync.WaitGroup, size int, file *zip.File) (Storage, error) 
 	if err != nil {
 		return nil, fmt.Errorf("Long.New: can not open file %s: %v", file.Name, err)
 	}
-	defer fs.Close()
+	defer func() { _ = fs.Close() }()
 	var ret Long
 	ret.data = make([]int64, size)
 	wg.Add(1)

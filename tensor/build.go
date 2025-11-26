@@ -31,12 +31,12 @@ func logBuildInfo(t *Tensor) {
 	leaks.Unlock()
 }
 
-func free(t *Tensor) {
+func freeLeakTracking(idx uint64) {
 	leaks.Lock()
-	if _, ok := leaks.data[t.idx]; !ok {
+	if _, ok := leaks.data[idx]; !ok {
 		panic("tensor: double free")
 	}
-	delete(leaks.data, t.idx)
+	delete(leaks.data, idx)
 	leaks.Unlock()
 }
 
@@ -60,7 +60,7 @@ func WriteLeaks(w io.Writer) {
 			if strings.HasPrefix(base, "runtime.") {
 				continue
 			}
-			fmt.Fprintf(w, "  - %s:%d => %s\n", frame.File, frame.Line, frame.Function)
+			_, _ = fmt.Fprintf(w, "  - %s:%d => %s\n", frame.File, frame.Line, frame.Function)
 			if !more {
 				break
 			}
@@ -70,7 +70,7 @@ func WriteLeaks(w io.Writer) {
 		return ids[i] < ids[j]
 	})
 	for _, id := range ids {
-		fmt.Fprintf(w, "tensor [>> tensor.%d <<] leaked:\n", id)
+		_, _ = fmt.Fprintf(w, "tensor [>> tensor.%d <<] leaked:\n", id)
 		writeStack(raw[id])
 	}
 }

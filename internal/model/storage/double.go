@@ -19,7 +19,7 @@ func (*Double) New(wg *sync.WaitGroup, size int, file *zip.File) (Storage, error
 	if err != nil {
 		return nil, fmt.Errorf("Double.New: can not open file %s: %v", file.Name, err)
 	}
-	defer fs.Close()
+	defer func() { _ = fs.Close() }()
 	var ret Double
 	ret.data = make([]float64, size)
 	wg.Add(1)

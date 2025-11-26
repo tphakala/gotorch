@@ -19,7 +19,7 @@ func (*BFloat16) New(wg *sync.WaitGroup, size int, file *zip.File) (Storage, err
 	if err != nil {
 		return nil, fmt.Errorf("BFloat16.New: can not open file %s: %v", file.Name, err)
 	}
-	defer fs.Close()
+	defer func() { _ = fs.Close() }()
 	var ret BFloat16
 	ret.data = make([]uint16, size)
 	wg.Add(1)
